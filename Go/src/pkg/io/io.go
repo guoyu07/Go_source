@@ -10,6 +10,12 @@
 // Because these interfaces and primitives wrap lower-level operations with
 // various implementations, unless otherwise informed clients should not
 // assume they are safe for parallel execution.
+//
+// IO包提供IO原生的基础接口。这个包的主要工作是封装了这些原生IO操作的具体实现，
+// 例如在os包中的一些函数，实现了一些公共的抽象接口，还有一些相关的操作。
+//
+// 由于这些接口和操作封装了各种底层操作，除非有特殊说明，否则就不能假设这些操作是
+// 并行执行安全的。
 package io
 
 import (
@@ -18,9 +24,12 @@ import (
 
 // ErrShortWrite means that a write accepted fewer bytes than requested
 // but failed to return an explicit error.
+// 
+// ErrShortWrite意思是往一个io中写入的字节数不够，失败了就会返回这个确切的错误信息
 var ErrShortWrite = errors.New("short write")
 
 // ErrShortBuffer means that a read required a longer buffer than was provided.
+// ErrShortBuffer意思是读操作作用的io buffer短于预期
 var ErrShortBuffer = errors.New("short buffer")
 
 // EOF is the error returned by Read when no more input is available.
@@ -28,10 +37,16 @@ var ErrShortBuffer = errors.New("short buffer")
 // If the EOF occurs unexpectedly in a structured data stream,
 // the appropriate error is either ErrUnexpectedEOF or some other error
 // giving more detail.
+//
+// EOF是读取的时候，当没有更多东西可以读的时候返回的。函数在想标志输入结束的时候返回EOF。
+// 如果EOF没有在定义好的数据结构读取的时候返回的话，应该返回的错误就是ErrUnexpectedEOF，或者
+// 是一些其他有更多细节信息的错误。
 var EOF = errors.New("EOF")
 
 // ErrUnexpectedEOF means that EOF was encountered in the
 // middle of reading a fixed-size block or data structure.
+//
+// ErrUnexpectedEOF意味着EOF在读取固定块或者数据结构的过程中间收到了EOF。
 var ErrUnexpectedEOF = errors.New("unexpected EOF")
 
 // Reader is the interface that wraps the basic Read method.
@@ -55,6 +70,19 @@ var ErrUnexpectedEOF = errors.New("unexpected EOF")
 // considering the error err.  Doing so correctly handles I/O errors
 // that happen after reading some bytes and also both of the
 // allowed EOF behaviors.
+//
+// Reader是封装了基本的读操作的接口
+//
+// Read读取p的时候读了len(p)个字节。它返回的是读取bytes的数目（0 <= n <= len(p)）,并且可能返回
+// 读操作过程中遇到的任何错误。即使Read返回的n是小于len(p), 也是有可能在调用的过程中使用p这么大
+// 的空间。如果数据可读，但不是len(p)的长度，Read操作会自然返回所有可读数据，而不会等候补足长度。
+//
+// 当读操作遇到一个错误或者在成功遇到了大于0的字节后遇到文件结束符的时候，它就会返回已经读取的字节。
+// 函数会返回非空的error或者在随后的调用中返回错误（这个时候n==0）。一个例子是Reader返回非空的
+// 字节长度，也有可能返回error == EOF 或者 nil，下一次调用就会返回0，EOF。
+//
+// 调用者在返回error的时候总是会将n > 0的字节返回回来。会在读取了一些字节并且读取两边都开始接收到EOF
+// 行为的时候，调用者就会执行正常的IO异常处理流程了。
 type Reader interface {
 	Read(p []byte) (n int, err error)
 }
@@ -65,11 +93,18 @@ type Reader interface {
 // It returns the number of bytes written from p (0 <= n <= len(p))
 // and any error encountered that caused the write to stop early.
 // Write must return a non-nil error if it returns n < len(p).
+//
+// Writer是封装了基本的写操作
+//
+// Write函数从p所在中读取了len(p)长度的字节写入底层的数据流。这个函数返回写入的字节数（0 <= n <= len(p)）
+// 如果有错误发生，就会导致写操作过早地停止。如果返回的n小于len(p), Write就必须返回非空的error。
 type Writer interface {
 	Write(p []byte) (n int, err error)
 }
 
 // Closer is the interface that wraps the basic Close method.
+//
+// Closer是封装了基本的关闭操作
 type Closer interface {
 	Close() error
 }
@@ -81,29 +116,39 @@ type Closer interface {
 // the file, 1 means relative to the current offset, and 2 means
 // relative to the end.  Seek returns the new offset and an Error, if
 // any.
+//
+// Seeker是封装了基本的Seek操作。
+//
+// Seek会设置下次读写的偏移量。每个偏移量的意思如下：
+// 0意味着从文件最开始的地方读取。1意味着从当前偏移量开始读取。2意味着从end偏移量开始。
+// Seek会返回新的偏移量和错误
 type Seeker interface {
 	Seek(offset int64, whence int) (ret int64, err error)
 }
 
 // ReadWriter is the interface that groups the basic Read and Write methods.
+// ReadWriter是读和写的组合
 type ReadWriter interface {
 	Reader
 	Writer
 }
 
 // ReadCloser is the interface that groups the basic Read and Close methods.
+// ReadCloser是读和关闭的组合
 type ReadCloser interface {
 	Reader
 	Closer
 }
 
 // WriteCloser is the interface that groups the basic Write and Close methods.
+// WriteCloser是写和关闭组合
 type WriteCloser interface {
 	Writer
 	Closer
 }
 
 // ReadWriteCloser is the interface that groups the basic Read, Write and Close methods.
+// ReadWriteCloser是读写关闭一起组合
 type ReadWriteCloser interface {
 	Reader
 	Writer

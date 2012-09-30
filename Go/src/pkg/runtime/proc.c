@@ -256,8 +256,8 @@ runtime·schedinit(void)
 	m->nomemprof--;	// TODO：不知道意思
 }
 
-extern void main·init(void);
-extern void main·main(void);
+extern void main·init(void);	// 初始化main包
+extern void main·main(void);	// 调用main包的main函数
 
 // The main goroutine.
 void
@@ -269,12 +269,16 @@ runtime·main(void)
 	// Those can arrange for main.main to run in the main thread
 	// by calling runtime.LockOSThread during initialization
 	// to preserve the lock.
+	// 在初始化的时候锁住main goroutine所在的线程，许多程序并不要求这么做，但是有一些程序需要
+	// 主线程做某些特定的调用。这些调用可以安排在main.main中，先锁住runtime.LockOSThread, 然后再
+	// 做初始化操作
 	runtime·LockOSThread();
 	// From now on, newgoroutines may use non-main threads.
+	// 在这里设置了以后，新的goroutine可以在非主线程上调用了
 	setmcpumax(runtime·gomaxprocs);
 	runtime·sched.init = true;
 	scvg = runtime·newproc1((byte*)runtime·MHeap_Scavenger, nil, 0, 0, runtime·main);
-	main·init();
+	main·init();  // 调用main的init函数
 	runtime·sched.init = false;
 	if(!runtime·sched.lockmain)
 		runtime·UnlockOSThread();
@@ -282,6 +286,7 @@ runtime·main(void)
 	// The deadlock detection has false negatives.
 	// Let scvg start up, to eliminate the false negative
 	// for the trivial program func main() { select{} }.
+	// 死锁检测已经是返回false了，然后让scvg启动，
 	runtime·gosched();
 
 	main·main();
@@ -969,6 +974,9 @@ schedule(G *gp)
 // kills off g.
 // Cannot split stack because it is called from exitsyscall.
 // See comment below.
+// 进入scheduler，如果g的状态是Grunning，重排g并且让每个等候在runing之前的程序跑起来。
+// 如果g的状态是Gmoribund，杀死g。
+// 不能划分stack，因为这个是会被exitsyscall调用的。看下面的注释
 #pragma textflag 7
 void
 runtime·gosched(void)
@@ -991,6 +999,11 @@ runtime·gosched(void)
 // It's okay to call matchmg and notewakeup even after
 // decrementing mcpu, because we haven't released the
 // sched lock yet, so the garbage collector cannot be running.
+// goroutine的g打算进入到系统调用的时候。存储下来这个不再使用cpu的状态。它只能被go的syscalllibrary
+// 和cgocall调用，并不是由runtime的底层调用的。
+// Entersyscall并不能划分开stack，runtime·gosave必须让g->sched执行调用者的堆栈，因为entersyscall会
+// 立刻返回。在减少mcpu的情况下调用matchmg和notewakeup是可以的，由于我们还没有释放sched锁，gc就不会
+// 运行
 #pragma textflag 7
 void
 runtime·entersyscall(void)
