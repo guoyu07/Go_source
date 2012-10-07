@@ -156,18 +156,21 @@ type ReadWriteCloser interface {
 }
 
 // ReadSeeker is the interface that groups the basic Read and Seek methods.
+// ReadSeeker是读和偏移一起组合
 type ReadSeeker interface {
 	Reader
 	Seeker
 }
 
 // WriteSeeker is the interface that groups the basic Write and Seek methods.
+// WriterSeeker是写和偏移一起组合
 type WriteSeeker interface {
 	Writer
 	Seeker
 }
 
 // ReadWriteSeeker is the interface that groups the basic Read, Write and Seek methods.
+// ReadWriteSeeker是基本的读写和偏移的组合
 type ReadWriteSeeker interface {
 	Reader
 	Writer
@@ -175,11 +178,13 @@ type ReadWriteSeeker interface {
 }
 
 // ReaderFrom is the interface that wraps the ReadFrom method.
+// ReaderFrom封装了ReadFrom接口
 type ReaderFrom interface {
 	ReadFrom(r Reader) (n int64, err error)
 }
 
 // WriterTo is the interface that wraps the WriteTo method.
+// WriterTo封装了WriteTo接口
 type WriterTo interface {
 	WriteTo(w Writer) (n int64, err error)
 }
@@ -208,6 +213,16 @@ type WriterTo interface {
 //
 // Clients of ReadAt can execute parallel ReadAt calls on the
 // same input source.
+//
+// ReaderAt封装了ReadAt接口
+//
+// ReadAt从输入源中在p偏移处读取len(p)长度的字节。这个函数返回了读取的字节数（0 <= n <= len(p)）
+// 并且返回任何遇到的错误。
+//
+// 当ReadAt返回的n小于len(p), 函数就会返回一个非空的error，这个error说明了为什么会有额外的字节返回。
+// 从这个角度看，ReadAt比Read更为严格。
+//
+// 即使ReadAt返回的n < len(p), 
 type ReaderAt interface {
 	ReadAt(p []byte, off int64) (n int, err error)
 }
