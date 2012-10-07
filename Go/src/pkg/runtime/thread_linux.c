@@ -168,14 +168,12 @@ runtime·newosproc(M *m, G *g, void *stk, void (*fn)(void))
 	}
 }
 
-// 操作系统初始化
 void
 runtime·osinit(void)
 {
-	runtime·ncpu = getproccount(); // 获取机器核数
+	runtime·ncpu = getproccount();
 }
 
-// Go环境初始化
 void
 runtime·goenvs(void)
 {
@@ -183,7 +181,6 @@ runtime·goenvs(void)
 }
 
 // Called to initialize a new m (including the bootstrap m).
-// 调用来初始化全局的m
 void
 runtime·minit(void)
 {
